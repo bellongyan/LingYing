@@ -90,7 +90,7 @@ export class LivePhotoService {
 
     const assetExt: string = LivePhotoService.getAssetExtension(imageExt, videoExt, 'heic');
     const apiResult: ProcessResult = await LivePhotoService.callOfficialApi(
-      context, heifSandboxUri, videoSandboxUri, originalBaseName, assetExt, originalFileName, pairedVideo
+      context, heifSandboxUri, videoSandboxUri, originalBaseName, assetExt, originalFileName, pairedVideo, videoExt
     );
 
     if (!apiResult.success) {
@@ -118,7 +118,7 @@ export class LivePhotoService {
   ): Promise<ProcessResult> {
     const assetExt: string = LivePhotoService.getAssetExtension(imageExt, videoExt, imageExt);
     const apiResult: ProcessResult = await LivePhotoService.callOfficialApi(
-      context, imageSandboxUri, videoSandboxUri, originalBaseName, assetExt, originalFileName, pairedVideo
+      context, imageSandboxUri, videoSandboxUri, originalBaseName, assetExt, originalFileName, pairedVideo, videoExt
     );
 
     if (!apiResult.success) {
@@ -203,10 +203,20 @@ export class LivePhotoService {
   }
 
   static getAssetExtension(imageExt: string, videoExt: string, fallbackImageExt: string): string {
-    if (videoExt === 'mov' || videoExt === 'mp4' || videoExt === '3gp') {
+    if (videoExt === 'mp4') {
       return fallbackImageExt;
     }
     return fallbackImageExt;
+  }
+
+  static readSandboxFileToBuffer(sandboxUri: string): ArrayBuffer {
+    const filePath: string = SandboxHelper.sandboxUriToPath(sandboxUri);
+    const stat = fs.statSync(filePath);
+    const file = fs.openSync(filePath, fs.OpenMode.READ_ONLY);
+    const buffer: ArrayBuffer = new ArrayBuffer(stat.size);
+    fs.readSync(file.fd, buffer);
+    fs.closeSync(file);
+    return buffer;
   }
 
   static async callOfficialApi(
@@ -216,9 +226,28 @@ export class LivePhotoService {
     assetBaseName: string,
     assetExtension: string,
     fileName: string,
+    pairedVideo: string,
+    videoExt: string
+  ): Promise<ProcessResult> {
+    hilog.info(DOMAIN, TAG, `[LivePhoto] callOfficialApi start, imageUri=%{public}s videoUri=%{public}s title=%{public}s ext=%{public}s videoExt=%{public}s`, imageSandboxUri, videoSandboxUri, assetBaseName, assetExtension, videoExt);
+
+    if (videoExt === 'mp4') {
+      return LivePhotoService.callOfficialApiByUri(context, imageSandboxUri, videoSandboxUri, assetBaseName, assetExtension, fileName, pairedVideo);
+    }
+
+    hilog.info(DOMAIN, TAG, `[LivePhoto] non-mp4 video, using ArrayBuffer addResource to bypass extension check`);
+    return LivePhotoService.callOfficialApiByBuffer(context, imageSandboxUri, videoSandboxUri, assetBaseName, assetExtension, fileName, pairedVideo);
+  }
+
+  static async callOfficialApiByUri(
+    context: common.UIAbilityContext,
+    imageSandboxUri: string,
+    videoSandboxUri: string,
+    assetBaseName: string,
+    assetExtension: string,
+    fileName: string,
     pairedVideo: string
   ): Promise<ProcessResult> {
-    hilog.info(DOMAIN, TAG, `[LivePhoto] callOfficialApi start, imageUri=%{public}s videoUri=%{public}s title=%{public}s ext=%{public}s`, imageSandboxUri, videoSandboxUri, assetBaseName, assetExtension);
     try {
       const phAccessHelper: photoAccessHelper.PhotoAccessHelper =
         photoAccessHelper.getPhotoAccessHelper(context);
@@ -228,7 +257,7 @@ export class LivePhotoService {
         subtype: photoAccessHelper.PhotoSubtype.MOVING_PHOTO,
       };
 
-      hilog.info(DOMAIN, TAG, `[LivePhoto] creating asset request (IMAGE/%{public}s/MOVING_PHOTO)...`, assetExtension);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [URI] creating asset request (IMAGE/%{public}s/MOVING_PHOTO)...`, assetExtension);
       const assetChangeRequest: photoAccessHelper.MediaAssetChangeRequest =
         photoAccessHelper.MediaAssetChangeRequest.createAssetRequest(
           context,
@@ -237,23 +266,23 @@ export class LivePhotoService {
           createOptions
         );
 
-      hilog.info(DOMAIN, TAG, `[LivePhoto] adding IMAGE_RESOURCE uri=%{public}s`, imageSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [URI] adding IMAGE_RESOURCE uri=%{public}s`, imageSandboxUri);
       assetChangeRequest.addResource(
         photoAccessHelper.ResourceType.IMAGE_RESOURCE,
         imageSandboxUri
       );
 
-      hilog.info(DOMAIN, TAG, `[LivePhoto] adding VIDEO_RESOURCE uri=%{public}s`, videoSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [URI] adding VIDEO_RESOURCE uri=%{public}s`, videoSandboxUri);
       assetChangeRequest.addResource(
         photoAccessHelper.ResourceType.VIDEO_RESOURCE,
         videoSandboxUri
       );
 
-      hilog.info(DOMAIN, TAG, `[LivePhoto] applying changes...`);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [URI] applying changes...`);
       await phAccessHelper.applyChanges(assetChangeRequest);
 
       const uri: string = assetChangeRequest.getAsset().uri;
-      hilog.info(DOMAIN, TAG, `[LivePhoto] applyChanges success, asset uri=%{public}s`, uri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [URI] applyChanges success, asset uri=%{public}s`, uri);
 
       return ProcessResult.createSuccess(
         fileName,
@@ -266,7 +295,82 @@ export class LivePhotoService {
       const err: BusinessError = e as BusinessError;
       const errMsg: string = err.message ?? 'unknown';
       const errCode: number = err.code ?? 0;
-      hilog.error(DOMAIN, TAG, `[LivePhoto] callOfficialApi failed: code=%{public}d message=%{public}s`, errCode, errMsg);
+      hilog.error(DOMAIN, TAG, `[LivePhoto] [URI] callOfficialApi failed: code=%{public}d message=%{public}s`, errCode, errMsg);
+      return ProcessResult.createFailure(
+        fileName,
+        pairedVideo,
+        ProcessErrorRecord.create(
+          fileName,
+          pairedVideo,
+          ErrorCode.OFFICIAL_API_FAILED,
+          `${ErrorCode.getMessage(ErrorCode.OFFICIAL_API_FAILED)}: ${errMsg}`,
+          ErrorCode.isRetryable(ErrorCode.OFFICIAL_API_FAILED)
+        )
+      );
+    }
+  }
+
+  static async callOfficialApiByBuffer(
+    context: common.UIAbilityContext,
+    imageSandboxUri: string,
+    videoSandboxUri: string,
+    assetBaseName: string,
+    assetExtension: string,
+    fileName: string,
+    pairedVideo: string
+  ): Promise<ProcessResult> {
+    try {
+      const phAccessHelper: photoAccessHelper.PhotoAccessHelper =
+        photoAccessHelper.getPhotoAccessHelper(context);
+
+      const createOptions: photoAccessHelper.CreateOptions = {
+        title: assetBaseName,
+        subtype: photoAccessHelper.PhotoSubtype.MOVING_PHOTO,
+      };
+
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] creating asset request (IMAGE/%{public}s/MOVING_PHOTO)...`, assetExtension);
+      const assetChangeRequest: photoAccessHelper.MediaAssetChangeRequest =
+        photoAccessHelper.MediaAssetChangeRequest.createAssetRequest(
+          context,
+          photoAccessHelper.PhotoType.IMAGE,
+          assetExtension,
+          createOptions
+        );
+
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] reading image file to ArrayBuffer...`);
+      const imageBuffer: ArrayBuffer = LivePhotoService.readSandboxFileToBuffer(imageSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] adding IMAGE_RESOURCE (size=%{public}d)`, imageBuffer.byteLength);
+      assetChangeRequest.addResource(
+        photoAccessHelper.ResourceType.IMAGE_RESOURCE,
+        imageBuffer
+      );
+
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] reading video file to ArrayBuffer...`);
+      const videoBuffer: ArrayBuffer = LivePhotoService.readSandboxFileToBuffer(videoSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] adding VIDEO_RESOURCE (size=%{public}d)`, videoBuffer.byteLength);
+      assetChangeRequest.addResource(
+        photoAccessHelper.ResourceType.VIDEO_RESOURCE,
+        videoBuffer
+      );
+
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] applying changes...`);
+      await phAccessHelper.applyChanges(assetChangeRequest);
+
+      const uri: string = assetChangeRequest.getAsset().uri;
+      hilog.info(DOMAIN, TAG, `[LivePhoto] [Buffer] applyChanges success, asset uri=%{public}s`, uri);
+
+      return ProcessResult.createSuccess(
+        fileName,
+        pairedVideo,
+        '',
+        uri,
+        false
+      );
+    } catch (e) {
+      const err: BusinessError = e as BusinessError;
+      const errMsg: string = err.message ?? 'unknown';
+      const errCode: number = err.code ?? 0;
+      hilog.error(DOMAIN, TAG, `[LivePhoto] [Buffer] callOfficialApi failed: code=%{public}d message=%{public}s`, errCode, errMsg);
       return ProcessResult.createFailure(
         fileName,
         pairedVideo,
@@ -301,7 +405,7 @@ export class LivePhotoService {
     const length: number = str.length;
     const buffer: ArrayBuffer = new ArrayBuffer(length);
     const view: Uint8Array = new Uint8Array(buffer);
-    for (let i = 0; i < length; i++) {
+    for (let i: number = 0; i < length; i++) {
       view[i] = str.charCodeAt(i);
     }
     return buffer;

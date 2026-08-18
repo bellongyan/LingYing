@@ -8,7 +8,8 @@ export class ErrorCode {
   static readonly OFFICIAL_API_FAILED: number = 1007;
   static readonly HEIF_CONVERSION_FAILED: number = 1008;
   static readonly BINARY_SPLICE_FAILED: number = 1009;
-  static readonly DELETE_ORIGINAL_FAILED: number = 1010;
+  static readonly VIDEO_TRANSCODE_FAILED: number = 1010;
+  static readonly DELETE_ORIGINAL_FAILED: number = 1011;
   static readonly NO_PAIR_FOUND: number = 1011;
   static readonly MULTIPLE_VIDEO_CONFLICT: number = 1012;
 
@@ -39,6 +40,9 @@ export class ErrorCode {
     }
     if (code === ErrorCode.BINARY_SPLICE_FAILED) {
       return '二进制拼接合成失败';
+    }
+    if (code === ErrorCode.VIDEO_TRANSCODE_FAILED) {
+      return '视频转码失败';
     }
     if (code === ErrorCode.DELETE_ORIGINAL_FAILED) {
       return '删除原始素材失败';
