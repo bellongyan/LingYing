@@ -1,38 +1,44 @@
 export class FilePair {
   baseName: string = '';
-  jpgUri: string = '';
-  mp4Uri: string = '';
-  jpgSize: number = 0;
-  mp4Size: number = 0;
+  imageUri: string = '';
+  videoUri: string = '';
+  imageSize: number = 0;
+  videoSize: number = 0;
   videoDuration: number = 0;
   imageWidth: number = 0;
   imageHeight: number = 0;
   videoWidth: number = 0;
   videoHeight: number = 0;
+  imageExt: string = '';
+  videoExt: string = '';
 
   static create(
     baseName: string,
-    jpgUri: string,
-    mp4Uri: string,
-    jpgSize: number,
-    mp4Size: number,
+    imageUri: string,
+    videoUri: string,
+    imageSize: number,
+    videoSize: number,
     videoDuration: number,
     imageWidth: number,
     imageHeight: number,
     videoWidth: number,
-    videoHeight: number
+    videoHeight: number,
+    imageExt: string,
+    videoExt: string
   ): FilePair {
     const pair = new FilePair();
     pair.baseName = baseName;
-    pair.jpgUri = jpgUri;
-    pair.mp4Uri = mp4Uri;
-    pair.jpgSize = jpgSize;
-    pair.mp4Size = mp4Size;
+    pair.imageUri = imageUri;
+    pair.videoUri = videoUri;
+    pair.imageSize = imageSize;
+    pair.videoSize = videoSize;
     pair.videoDuration = videoDuration;
     pair.imageWidth = imageWidth;
     pair.imageHeight = imageHeight;
     pair.videoWidth = videoWidth;
     pair.videoHeight = videoHeight;
+    pair.imageExt = imageExt;
+    pair.videoExt = videoExt;
     return pair;
   }
 }

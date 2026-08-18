@@ -16,20 +16,22 @@ const DOMAIN: number = 0xFF00;
 export class LivePhotoService {
   static async composeLivePhoto(
     context: common.UIAbilityContext,
-    jpgSandboxUri: string,
-    mp4SandboxUri: string,
-    originalJpgUri: string,
-    originalMp4Uri: string
+    imageSandboxUri: string,
+    videoSandboxUri: string,
+    originalImageUri: string,
+    originalVideoUri: string,
+    imageExt: string,
+    videoExt: string
   ): Promise<ProcessResult> {
-    hilog.info(DOMAIN, TAG, `[LivePhoto] composeLivePhoto start, jpgUri=%{public}s mp4Uri=%{public}s`, jpgSandboxUri, mp4SandboxUri);
-    const originalFileName: string = SandboxHelper.extractFileName(originalJpgUri);
-    const originalBaseName: string = SandboxHelper.extractBaseName(originalJpgUri);
-    const pairedVideo: string = SandboxHelper.extractBaseName(originalMp4Uri) + '.mp4';
+    hilog.info(DOMAIN, TAG, `[LivePhoto] composeLivePhoto start, imageUri=%{public}s videoUri=%{public}s imageExt=%{public}s videoExt=%{public}s`, imageSandboxUri, videoSandboxUri, imageExt, videoExt);
+    const originalFileName: string = SandboxHelper.extractFileName(originalImageUri);
+    const originalBaseName: string = SandboxHelper.extractBaseName(originalImageUri);
+    const pairedVideo: string = SandboxHelper.extractFileName(originalVideoUri);
 
     hilog.info(DOMAIN, TAG, `[LivePhoto] trying L0...`);
     const l0Result: ProcessResult = await LivePhotoService.tryL0(
-      context, jpgSandboxUri, mp4SandboxUri,
-      originalBaseName, originalFileName, pairedVideo, originalJpgUri
+      context, imageSandboxUri, videoSandboxUri,
+      originalBaseName, originalFileName, pairedVideo, originalImageUri, imageExt, videoExt
     );
     if (l0Result.success) {
       hilog.info(DOMAIN, TAG, `[LivePhoto] L0 success`);
@@ -38,8 +40,8 @@ export class LivePhotoService {
     hilog.warn(DOMAIN, TAG, `[LivePhoto] L0 failed, trying L1...`);
 
     const l1Result: ProcessResult = await LivePhotoService.tryL1(
-      context, jpgSandboxUri, mp4SandboxUri,
-      originalBaseName, originalFileName, pairedVideo
+      context, imageSandboxUri, videoSandboxUri,
+      originalBaseName, originalFileName, pairedVideo, imageExt, videoExt
     );
     if (l1Result.success) {
       hilog.info(DOMAIN, TAG, `[LivePhoto] L1 success`);
@@ -48,7 +50,7 @@ export class LivePhotoService {
     hilog.warn(DOMAIN, TAG, `[LivePhoto] L1 failed, trying L2...`);
 
     const l2Result: ProcessResult = await LivePhotoService.tryL2(
-      context, jpgSandboxUri, mp4SandboxUri, originalFileName, pairedVideo, originalJpgUri
+      context, imageSandboxUri, videoSandboxUri, originalFileName, pairedVideo, originalImageUri
     );
     if (l2Result.success) {
       hilog.info(DOMAIN, TAG, `[LivePhoto] L2 success`);
@@ -60,12 +62,14 @@ export class LivePhotoService {
 
   static async tryL0(
     context: common.UIAbilityContext,
-    jpgSandboxUri: string,
-    mp4SandboxUri: string,
+    imageSandboxUri: string,
+    videoSandboxUri: string,
     originalBaseName: string,
     originalFileName: string,
     pairedVideo: string,
-    originalJpgUri: string
+    originalImageUri: string,
+    imageExt: string,
+    videoExt: string
   ): Promise<ProcessResult> {
     if (!HeifService.isHeifSupported()) {
       hilog.warn(DOMAIN, TAG, `[LivePhoto] L0: HEIF not supported, skip`);
@@ -75,8 +79,8 @@ export class LivePhotoService {
     let heifSandboxUri: string = '';
     try {
       const heifPath: string = `${context.filesDir}/${AppConstants.SANDBOX_DIR}/${originalBaseName}_${Date.now()}.heic`;
-      hilog.info(DOMAIN, TAG, `[LivePhoto] L0: converting JPG to HEIF, output=%{public}s`, heifPath);
-      heifSandboxUri = await HeifService.convertJpgToHeif(context, jpgSandboxUri, heifPath, originalJpgUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L0: converting image to HEIF, output=%{public}s`, heifPath);
+      heifSandboxUri = await HeifService.convertToHeif(context, imageSandboxUri, heifPath, originalImageUri);
       hilog.info(DOMAIN, TAG, `[LivePhoto] L0: HEIF conversion success, uri=%{public}s`, heifSandboxUri);
     } catch (e) {
       const heifErr: BusinessError = e as BusinessError;
@@ -84,8 +88,9 @@ export class LivePhotoService {
       return LivePhotoService.createFailureResult(originalFileName, pairedVideo, ErrorCode.HEIF_CONVERSION_FAILED, false);
     }
 
+    const assetExt: string = LivePhotoService.getAssetExtension(imageExt, videoExt, 'heic');
     const apiResult: ProcessResult = await LivePhotoService.callOfficialApi(
-      context, heifSandboxUri, mp4SandboxUri, originalBaseName, 'heic', originalFileName, pairedVideo
+      context, heifSandboxUri, videoSandboxUri, originalBaseName, assetExt, originalFileName, pairedVideo
     );
 
     if (!apiResult.success) {
@@ -103,14 +108,17 @@ export class LivePhotoService {
 
   static async tryL1(
     context: common.UIAbilityContext,
-    jpgSandboxUri: string,
-    mp4SandboxUri: string,
+    imageSandboxUri: string,
+    videoSandboxUri: string,
     originalBaseName: string,
     originalFileName: string,
-    pairedVideo: string
+    pairedVideo: string,
+    imageExt: string,
+    videoExt: string
   ): Promise<ProcessResult> {
+    const assetExt: string = LivePhotoService.getAssetExtension(imageExt, videoExt, imageExt);
     const apiResult: ProcessResult = await LivePhotoService.callOfficialApi(
-      context, jpgSandboxUri, mp4SandboxUri, originalBaseName, 'jpg', originalFileName, pairedVideo
+      context, imageSandboxUri, videoSandboxUri, originalBaseName, assetExt, originalFileName, pairedVideo
     );
 
     if (!apiResult.success) {
@@ -128,46 +136,46 @@ export class LivePhotoService {
 
   static async tryL2(
     context: common.UIAbilityContext,
-    jpgSandboxUri: string,
-    mp4SandboxUri: string,
+    imageSandboxUri: string,
+    videoSandboxUri: string,
     fileName: string,
     pairedVideo: string,
-    originalJpgUri: string
+    originalImageUri: string
   ): Promise<ProcessResult> {
     hilog.info(DOMAIN, TAG, `[LivePhoto] tryL2 start (binary splice fallback)`);
     try {
-      const jpgPath: string = SandboxHelper.sandboxUriToPath(jpgSandboxUri);
-      const mp4Path: string = SandboxHelper.sandboxUriToPath(mp4SandboxUri);
-      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: jpgPath=%{public}s mp4Path=%{public}s`, jpgPath, mp4Path);
+      const imagePath: string = SandboxHelper.sandboxUriToPath(imageSandboxUri);
+      const videoPath: string = SandboxHelper.sandboxUriToPath(videoSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: imagePath=%{public}s videoPath=%{public}s`, imagePath, videoPath);
 
-      const jpgStat = fs.statSync(jpgPath);
-      const mp4Stat = fs.statSync(mp4Path);
-      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: jpgSize=%{public}d mp4Size=%{public}d`, jpgStat.size, mp4Stat.size);
+      const imageStat = fs.statSync(imagePath);
+      const videoStat = fs.statSync(videoPath);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: imageSize=%{public}d videoSize=%{public}d`, imageStat.size, videoStat.size);
 
-      const outputBaseName: string = SandboxHelper.extractBaseName(jpgSandboxUri);
+      const outputBaseName: string = SandboxHelper.extractBaseName(imageSandboxUri);
       const outputPath: string = `${context.filesDir}/${AppConstants.SANDBOX_DIR}/${outputBaseName}_${Date.now()}.jpg`;
       const outputFile = fs.openSync(outputPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
 
-      const jpgFile = fs.openSync(jpgPath, fs.OpenMode.READ_ONLY);
-      const jpgBuffer = new ArrayBuffer(jpgStat.size);
-      fs.readSync(jpgFile.fd, jpgBuffer);
-      fs.closeSync(jpgFile);
-      fs.writeSync(outputFile.fd, jpgBuffer);
+      const imageFile = fs.openSync(imagePath, fs.OpenMode.READ_ONLY);
+      const imageBuffer = new ArrayBuffer(imageStat.size);
+      fs.readSync(imageFile.fd, imageBuffer);
+      fs.closeSync(imageFile);
+      fs.writeSync(outputFile.fd, imageBuffer);
 
-      const xmpStr: string = LivePhotoService.buildXmpMetadata(jpgStat.size, mp4Stat.size);
+      const xmpStr: string = LivePhotoService.buildXmpMetadata(imageStat.size, videoStat.size);
       const xmpBuffer: ArrayBuffer = LivePhotoService.stringToArrayBuffer(xmpStr);
       fs.writeSync(outputFile.fd, xmpBuffer);
 
-      const mp4File = fs.openSync(mp4Path, fs.OpenMode.READ_ONLY);
-      const mp4Buffer = new ArrayBuffer(mp4Stat.size);
-      fs.readSync(mp4File.fd, mp4Buffer);
-      fs.closeSync(mp4File);
-      fs.writeSync(outputFile.fd, mp4Buffer);
+      const videoFile = fs.openSync(videoPath, fs.OpenMode.READ_ONLY);
+      const videoBuffer = new ArrayBuffer(videoStat.size);
+      fs.readSync(videoFile.fd, videoBuffer);
+      fs.closeSync(videoFile);
+      fs.writeSync(outputFile.fd, videoBuffer);
 
       fs.closeSync(outputFile);
 
       hilog.info(DOMAIN, TAG, `[LivePhoto] L2: transferring EXIF date to output`);
-      await ExifHelper.transferDateTime(jpgSandboxUri, outputPath, originalJpgUri);
+      await ExifHelper.transferDateTime(imageSandboxUri, outputPath, originalImageUri);
 
       return ProcessResult.createSuccess(
         fileName,
@@ -194,16 +202,23 @@ export class LivePhotoService {
     }
   }
 
+  static getAssetExtension(imageExt: string, videoExt: string, fallbackImageExt: string): string {
+    if (videoExt === 'mov' || videoExt === 'mp4' || videoExt === '3gp') {
+      return fallbackImageExt;
+    }
+    return fallbackImageExt;
+  }
+
   static async callOfficialApi(
     context: common.UIAbilityContext,
     imageSandboxUri: string,
-    mp4SandboxUri: string,
+    videoSandboxUri: string,
     assetBaseName: string,
     assetExtension: string,
     fileName: string,
     pairedVideo: string
   ): Promise<ProcessResult> {
-    hilog.info(DOMAIN, TAG, `[LivePhoto] callOfficialApi start, imageUri=%{public}s mp4Uri=%{public}s title=%{public}s ext=%{public}s`, imageSandboxUri, mp4SandboxUri, assetBaseName, assetExtension);
+    hilog.info(DOMAIN, TAG, `[LivePhoto] callOfficialApi start, imageUri=%{public}s videoUri=%{public}s title=%{public}s ext=%{public}s`, imageSandboxUri, videoSandboxUri, assetBaseName, assetExtension);
     try {
       const phAccessHelper: photoAccessHelper.PhotoAccessHelper =
         photoAccessHelper.getPhotoAccessHelper(context);
@@ -228,10 +243,10 @@ export class LivePhotoService {
         imageSandboxUri
       );
 
-      hilog.info(DOMAIN, TAG, `[LivePhoto] adding VIDEO_RESOURCE uri=%{public}s`, mp4SandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] adding VIDEO_RESOURCE uri=%{public}s`, videoSandboxUri);
       assetChangeRequest.addResource(
         photoAccessHelper.ResourceType.VIDEO_RESOURCE,
-        mp4SandboxUri
+        videoSandboxUri
       );
 
       hilog.info(DOMAIN, TAG, `[LivePhoto] applying changes...`);
@@ -266,7 +281,7 @@ export class LivePhotoService {
     }
   }
 
-  static buildXmpMetadata(jpgSize: number, mp4Size: number): string {
+  static buildXmpMetadata(imageSize: number, videoSize: number): string {
     return `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -274,7 +289,7 @@ export class LivePhotoService {
       xmlns:GCamera='http://ns.google.com/photos/1.0/camera/'
       GCamera:MicroVideo='1'
       GCamera:MicroVideoVersion='1'
-      GCamera:MicroVideoOffset='${mp4Size}'
+      GCamera:MicroVideoOffset='${videoSize}'
       GCamera:MicroVideoPresentationTimestampUs='0'>
     </rdf:Description>
   </rdf:RDF>

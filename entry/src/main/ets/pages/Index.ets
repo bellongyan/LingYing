@@ -37,7 +37,7 @@ struct Index {
                 .fontWeight(FontWeight.Medium)
                 .fontColor('#333333')
                 .margin({ top: 8 })
-              Text('选择一张JPG图片和一个MP4视频\n合成为动态照片')
+              Text('选择一张图片和一个视频\n合成为动态照片')
                 .fontSize(12)
                 .fontColor('#999999')
                 .margin({ top: 4 })

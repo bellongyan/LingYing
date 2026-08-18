@@ -14,10 +14,10 @@ export class ErrorCode {
 
   static getMessage(code: number): string {
     if (code === ErrorCode.INVALID_IMAGE_FORMAT) {
-      return '请选择 JPG/JPEG 格式图片';
+      return '请选择 JPG/JPEG/HEIC/HEIF/PNG/WebP/BMP 格式图片';
     }
     if (code === ErrorCode.INVALID_VIDEO_FORMAT) {
-      return '请选择 MP4 格式视频';
+      return '请选择 MP4/MOV/3GP/MKV/AVI 格式视频';
     }
     if (code === ErrorCode.VIDEO_TOO_LONG) {
       return '视频时长需 ≤ 10 秒';

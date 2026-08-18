@@ -7,6 +7,7 @@ import { LivePhotoService } from '../service/LivePhotoService';
 import { FilePair, ProcessResult, ProcessErrorRecord } from '../model/FilePair';
 import { ErrorCode } from '../constants/ErrorCode';
 import { ResultDataHolder } from '../model/RouteParams';
+import { AppConstants } from '../constants/AppConstants';
 
 @Entry
 @Component
@@ -59,7 +60,7 @@ struct BatchCompose {
                 .fontSize(14)
                 .fontColor('#999999')
                 .margin({ bottom: 8 })
-              Text('提示：请同时选择 JPG 图片和 MP4 视频\n同名文件将自动配对合成')
+              Text('提示：请同时选择图片和视频\n同名文件将自动配对合成\n支持 JPG/HEIC/PNG/WebP/BMP 图片\n支持 MP4/MOV/3GP/MKV/AVI 视频')
                 .fontSize(12)
                 .fontColor('#CCCCCC')
                 .margin({ bottom: 16 })
@@ -83,7 +84,7 @@ struct BatchCompose {
           }
 
           Column() {
-            Text('温馨提示：由于系统权限限制，合成后需在相册中手动删除原始 JPG 和 MP4 素材')
+            Text('温馨提示：由于系统权限限制，合成后需在相册中手动删除原始素材')
               .fontSize(12)
               .fontColor('#999999')
           }
@@ -124,7 +125,7 @@ struct BatchCompose {
 
               ForEach(this.filePairs, (pair: FilePair, index: number) => {
                 Row() {
-                  Text(`${pair.baseName}.jpg + ${pair.baseName}.mp4`)
+                  Text(`${pair.baseName}.${pair.imageExt} + ${pair.baseName}.${pair.videoExt}`)
                     .fontSize(13)
                     .fontColor('#666666')
                     .layoutWeight(1)
@@ -200,10 +201,10 @@ struct BatchCompose {
 
           if (this.selectedUris.length > 0 && this.filePairs.length === 0 && !this.isScanning) {
             Column() {
-              Text('未找到可配对的同名 JPG+MP4 文件')
+              Text('未找到可配对的同名图片+视频文件')
                 .fontSize(14)
                 .fontColor('#999999')
-              Text('请确保同时选择了同名的 .jpg 和 .mp4 文件')
+              Text('请确保同时选择了同名的图片和视频文件')
                 .fontSize(12)
                 .fontColor('#CCCCCC')
                 .margin({ top: 4 })
@@ -261,21 +262,23 @@ struct BatchCompose {
 
     const imageMap: Record<string, string> = {};
     const videoMap: Record<string, string[]> = {};
-    const imageExtensions: string[] = ['jpg', 'jpeg'];
-    const videoExtensions: string[] = ['mp4'];
+    const imageExtMap: Record<string, string> = {};
+    const videoExtMap: Record<string, string> = {};
 
     for (let i = 0; i < this.selectedUris.length; i++) {
       const uri: string = this.selectedUris[i];
       const ext: string = SandboxHelper.extractExtension(uri);
       const baseName: string = SandboxHelper.extractBaseName(uri);
 
-      if (imageExtensions.indexOf(ext) >= 0) {
+      if (AppConstants.IMAGE_EXTENSIONS.indexOf(ext) >= 0) {
         imageMap[baseName.toLowerCase()] = uri;
-      } else if (videoExtensions.indexOf(ext) >= 0) {
+        imageExtMap[baseName.toLowerCase()] = ext;
+      } else if (AppConstants.VIDEO_EXTENSIONS.indexOf(ext) >= 0) {
         if (videoMap[baseName.toLowerCase()] === undefined) {
           videoMap[baseName.toLowerCase()] = [];
         }
         videoMap[baseName.toLowerCase()].push(uri);
+        videoExtMap[baseName.toLowerCase()] = ext;
       }
     }
 
@@ -294,7 +297,9 @@ struct BatchCompose {
           videoUris[0],
           SandboxHelper.getFileSize(imageUri),
           SandboxHelper.getFileSize(videoUris[0]),
-          0, 0, 0, 0, 0
+          0, 0, 0, 0, 0,
+          imageExtMap[key] ?? '',
+          videoExtMap[key] ?? ''
         );
         this.filePairs.push(pair);
         pairedKeys[key] = true;
@@ -325,15 +330,17 @@ struct BatchCompose {
       const pair: FilePair = this.filePairs[i];
 
       try {
-        const jpgSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, pair.jpgUri);
-        const mp4SandboxUri: string = await SandboxHelper.copyToSandbox(this.context, pair.mp4Uri);
+        const imageSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, pair.imageUri);
+        const videoSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, pair.videoUri);
 
         const result: ProcessResult = await LivePhotoService.composeLivePhoto(
           this.context,
-          jpgSandboxUri,
-          mp4SandboxUri,
-          pair.jpgUri,
-          pair.mp4Uri
+          imageSandboxUri,
+          videoSandboxUri,
+          pair.imageUri,
+          pair.videoUri,
+          pair.imageExt,
+          pair.videoExt
         );
 
         this.results.push(result);
@@ -347,11 +354,11 @@ struct BatchCompose {
         const err = e as BusinessError;
         const errMsg: string = err.message ?? '未知错误';
         const failResult: ProcessResult = ProcessResult.createFailure(
-          pair.baseName + '.jpg',
-          pair.baseName + '.mp4',
+          pair.baseName + '.' + pair.imageExt,
+          pair.baseName + '.' + pair.videoExt,
           ProcessErrorRecord.create(
-            pair.baseName + '.jpg',
-            pair.baseName + '.mp4',
+            pair.baseName + '.' + pair.imageExt,
+            pair.baseName + '.' + pair.videoExt,
             ErrorCode.OFFICIAL_API_FAILED,
             errMsg,
             true

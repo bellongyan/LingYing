@@ -240,15 +240,20 @@ struct ResultPage {
       return;
     }
     try {
-      const jpgSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, item.fileName);
-      const mp4SandboxUri: string = await SandboxHelper.copyToSandbox(this.context, item.pairedVideo);
+      const imageSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, item.fileName);
+      const videoSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, item.pairedVideo);
+
+      const imageExt: string = SandboxHelper.extractExtension(item.fileName);
+      const videoExt: string = SandboxHelper.extractExtension(item.pairedVideo);
 
       const result: ProcessResult = await LivePhotoService.composeLivePhoto(
         this.context,
-        jpgSandboxUri,
-        mp4SandboxUri,
+        imageSandboxUri,
+        videoSandboxUri,
         item.fileName,
-        item.pairedVideo
+        item.pairedVideo,
+        imageExt,
+        videoExt
       );
 
       for (let i = 0; i < this.results.length; i++) {

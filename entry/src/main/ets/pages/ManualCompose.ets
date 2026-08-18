@@ -9,6 +9,7 @@ import { SandboxHelper } from '../service/SandboxHelper';
 import { ProcessResult } from '../model/FilePair';
 import { ErrorCode } from '../constants/ErrorCode';
 import { ResultDataHolder } from '../model/RouteParams';
+import { AppConstants } from '../constants/AppConstants';
 
 const TAG: string = 'LingYing';
 const DOMAIN: number = 0xFF00;
@@ -59,7 +60,7 @@ struct ManualCompose {
       Scroll() {
         Column({ space: 16 }) {
           FileCard({
-            fileLabel: '选择图片 (JPG/JPEG)',
+            fileLabel: '选择图片 (JPG/HEIC/PNG/WebP/BMP)',
             fileName: this.imageFileName,
             fileSize: this.imageSize,
             fileDuration: '',
@@ -71,7 +72,7 @@ struct ManualCompose {
           })
 
           FileCard({
-            fileLabel: '选择视频 (MP4)',
+            fileLabel: '选择视频 (MP4/MOV/3GP/MKV/AVI)',
             fileName: this.videoFileName,
             fileSize: this.videoSize,
             fileDuration: this.videoDuration,
@@ -83,7 +84,7 @@ struct ManualCompose {
           })
 
           Column() {
-            Text('温馨提示：由于系统权限限制，合成后需在相册中手动删除原始 JPG 和 MP4 素材')
+            Text('温馨提示：由于系统权限限制，合成后需在相册中手动删除原始素材')
               .fontSize(12)
               .fontColor('#999999')
           }
@@ -285,19 +286,24 @@ struct ManualCompose {
     hilog.info(DOMAIN, TAG, `[ManualCompose] executeCompose start, imageUri=%{public}s videoUri=%{public}s`, this.imageUri, this.videoUri);
 
     try {
-      hilog.info(DOMAIN, TAG, `[ManualCompose] copying JPG to sandbox...`);
-      const jpgSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, this.imageUri);
-      hilog.info(DOMAIN, TAG, `[ManualCompose] copying MP4 to sandbox...`);
-      const mp4SandboxUri: string = await SandboxHelper.copyToSandbox(this.context, this.videoUri);
-      hilog.info(DOMAIN, TAG, `[ManualCompose] sandbox copy done, jpgUri=%{public}s mp4Uri=%{public}s`, jpgSandboxUri, mp4SandboxUri);
+      hilog.info(DOMAIN, TAG, `[ManualCompose] copying image to sandbox...`);
+      const imageSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, this.imageUri);
+      hilog.info(DOMAIN, TAG, `[ManualCompose] copying video to sandbox...`);
+      const videoSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, this.videoUri);
+      hilog.info(DOMAIN, TAG, `[ManualCompose] sandbox copy done, imageUri=%{public}s videoUri=%{public}s`, imageSandboxUri, videoSandboxUri);
+
+      const imageExt: string = SandboxHelper.extractExtension(this.imageUri);
+      const videoExt: string = SandboxHelper.extractExtension(this.videoUri);
 
       hilog.info(DOMAIN, TAG, `[ManualCompose] calling composeLivePhoto...`);
       const result: ProcessResult = await LivePhotoService.composeLivePhoto(
         this.context,
-        jpgSandboxUri,
-        mp4SandboxUri,
+        imageSandboxUri,
+        videoSandboxUri,
         this.imageUri,
-        this.videoUri
+        this.videoUri,
+        imageExt,
+        videoExt
       );
       hilog.info(DOMAIN, TAG, `[ManualCompose] composeLivePhoto done, success=%{public}s`, `${result.success}`);
 

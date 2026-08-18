@@ -28,14 +28,14 @@ export class HeifService {
     return HeifService.heifSupported;
   }
 
-  static async convertJpgToHeif(
+  static async convertToHeif(
     context: common.UIAbilityContext,
-    jpgPath: string,
+    imagePath: string,
     outputHeifPath: string,
     originalSourceUri?: string
   ): Promise<string> {
-    hilog.info(DOMAIN, TAG, `[HeifService] convertJpgToHeif jpgPath=%{public}s output=%{public}s`, jpgPath, outputHeifPath);
-    const realPath: string = SandboxHelper.sandboxUriToPath(jpgPath);
+    hilog.info(DOMAIN, TAG, `[HeifService] convertToHeif imagePath=%{public}s output=%{public}s`, imagePath, outputHeifPath);
+    const realPath: string = SandboxHelper.sandboxUriToPath(imagePath);
     hilog.info(DOMAIN, TAG, `[HeifService] realPath=%{public}s`, realPath);
     let srcFile: fs.File | undefined = undefined;
     try {
@@ -60,7 +60,7 @@ export class HeifService {
       hilog.info(DOMAIN, TAG, `[HeifService] HEIF conversion success`);
     } catch (e) {
       const he: BusinessError = e as BusinessError;
-      hilog.error(DOMAIN, TAG, `[HeifService] convertJpgToHeif failed: code=%{public}d message=%{public}s`, he.code ?? 0, he.message ?? 'unknown');
+      hilog.error(DOMAIN, TAG, `[HeifService] convertToHeif failed: code=%{public}d message=%{public}s`, he.code ?? 0, he.message ?? 'unknown');
       throw new Error(`HEIF conversion failed: ${he.message ?? 'unknown'}`);
     } finally {
       if (srcFile !== undefined) {
@@ -69,7 +69,7 @@ export class HeifService {
     }
 
     hilog.info(DOMAIN, TAG, `[HeifService] transferring EXIF date to HEIF output`);
-    await ExifHelper.transferDateTime(jpgPath, outputHeifPath, originalSourceUri);
+    await ExifHelper.transferDateTime(imagePath, outputHeifPath, originalSourceUri);
 
     return `file://${outputHeifPath}`;
   }

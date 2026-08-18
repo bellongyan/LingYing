@@ -85,7 +85,9 @@ export class FilePairScanner {
           0,
           0,
           0,
-          0
+          0,
+          imageFile.extension,
+          videoFile.extension
         );
         pairs.push(pair);
       } else {
@@ -99,7 +101,9 @@ export class FilePairScanner {
           0,
           0,
           0,
-          0
+          0,
+          imageFile.extension,
+          videoFiles[0].extension
         );
         pairs.push(pair);
       }
@@ -111,8 +115,8 @@ export class FilePairScanner {
   static getUnpairedFiles(files: ScannedFile[], pairs: FilePair[]): ScannedFile[] {
     const pairedUris: Record<string, boolean> = {};
     for (let i = 0; i < pairs.length; i++) {
-      pairedUris[pairs[i].jpgUri] = true;
-      pairedUris[pairs[i].mp4Uri] = true;
+      pairedUris[pairs[i].imageUri] = true;
+      pairedUris[pairs[i].videoUri] = true;
     }
 
     const unpaired: ScannedFile[] = [];
