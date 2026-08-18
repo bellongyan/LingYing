@@ -1,6 +1,6 @@
 # 灵影 (LingYing)
 
-将 JPG 图片与同名 MP4 视频合成为 HarmonyOS 动态照片（Moving Photo）的本地工具应用。
+将 JPG 图片与同名 MP4 视频合成为 HarmonyOS 动态照片（Live Photo）的本地工具应用。
 
 ## 功能
 
@@ -34,7 +34,7 @@ entry/src/main/ets/
 │   ├── FileValidator.ets     # 文件校验（格式、大小、时长、分辨率）
 │   ├── ExifHelper.ets        # EXIF 日期读取/写入/迁移
 │   ├── HeifService.ets       # JPG → HEIF 转换
-│   ├── MovingPhotoService.ets # 核心合成逻辑（L0/L1/L2 降级）
+│   ├── LivePhotoService.ets  # 核心合成逻辑（L0/L1/L2 降级）
 │   └── FilePairScanner.ets   # 文件夹扫描 & 自动配对
 ├── component/
 │   ├── MaterialDialog.ets    # 素材信息对话框
@@ -94,7 +94,7 @@ HarmonyOS 对媒体文件的删除操作受到严格的权限管控，存在以�
 
 如果您确实需要自动删除原始素材的功能，且您的应用符合特殊场景，可以尝试申请 `WRITE_IMAGEVIDEO` 受限权限：
 
-1. 登录 [AppGallery Connect (AGC)](https://developer.huawei.com/consumer/cn/service/j/agconnect/index.html)
+1. 登录 [AppGallery Connect (AGC)](https://developer.huawei.com/consumer/cn/service/josp/agc/index.html#/)
 2. 进入应用管理 → 选择应用 → **申请权限**
 3. 在「受限 ACL 权限」中勾选 `ohos.permission.WRITE_IMAGEVIDEO`
 4. 填写申请理由（需符合克隆备份、相册整理等特殊场景）

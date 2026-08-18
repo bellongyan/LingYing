@@ -3,7 +3,7 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { ProgressPanel } from '../component/ProgressPanel';
 import { SandboxHelper } from '../service/SandboxHelper';
-import { MovingPhotoService } from '../service/MovingPhotoService';
+import { LivePhotoService } from '../service/LivePhotoService';
 import { FilePair, ProcessResult, ProcessErrorRecord } from '../model/FilePair';
 import { ErrorCode } from '../constants/ErrorCode';
 import { ResultDataHolder } from '../model/RouteParams';
@@ -328,7 +328,7 @@ struct BatchCompose {
         const jpgSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, pair.jpgUri);
         const mp4SandboxUri: string = await SandboxHelper.copyToSandbox(this.context, pair.mp4Uri);
 
-        const result: ProcessResult = await MovingPhotoService.composeMovingPhoto(
+        const result: ProcessResult = await LivePhotoService.composeLivePhoto(
           this.context,
           jpgSandboxUri,
           mp4SandboxUri,

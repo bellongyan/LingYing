@@ -13,47 +13,47 @@ import { ExifHelper } from './ExifHelper';
 const TAG: string = 'LingYing';
 const DOMAIN: number = 0xFF00;
 
-export class MovingPhotoService {
-  static async composeMovingPhoto(
+export class LivePhotoService {
+  static async composeLivePhoto(
     context: common.UIAbilityContext,
     jpgSandboxUri: string,
     mp4SandboxUri: string,
     originalJpgUri: string,
     originalMp4Uri: string
   ): Promise<ProcessResult> {
-    hilog.info(DOMAIN, TAG, `[MovingPhoto] composeMovingPhoto start, jpgUri=%{public}s mp4Uri=%{public}s`, jpgSandboxUri, mp4SandboxUri);
+    hilog.info(DOMAIN, TAG, `[LivePhoto] composeLivePhoto start, jpgUri=%{public}s mp4Uri=%{public}s`, jpgSandboxUri, mp4SandboxUri);
     const originalFileName: string = SandboxHelper.extractFileName(originalJpgUri);
     const originalBaseName: string = SandboxHelper.extractBaseName(originalJpgUri);
     const pairedVideo: string = SandboxHelper.extractBaseName(originalMp4Uri) + '.mp4';
 
-    hilog.info(DOMAIN, TAG, `[MovingPhoto] trying L0...`);
-    const l0Result: ProcessResult = await MovingPhotoService.tryL0(
+    hilog.info(DOMAIN, TAG, `[LivePhoto] trying L0...`);
+    const l0Result: ProcessResult = await LivePhotoService.tryL0(
       context, jpgSandboxUri, mp4SandboxUri,
       originalBaseName, originalFileName, pairedVideo, originalJpgUri
     );
     if (l0Result.success) {
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L0 success`);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L0 success`);
       return l0Result;
     }
-    hilog.warn(DOMAIN, TAG, `[MovingPhoto] L0 failed, trying L1...`);
+    hilog.warn(DOMAIN, TAG, `[LivePhoto] L0 failed, trying L1...`);
 
-    const l1Result: ProcessResult = await MovingPhotoService.tryL1(
+    const l1Result: ProcessResult = await LivePhotoService.tryL1(
       context, jpgSandboxUri, mp4SandboxUri,
       originalBaseName, originalFileName, pairedVideo
     );
     if (l1Result.success) {
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L1 success`);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L1 success`);
       return l1Result;
     }
-    hilog.warn(DOMAIN, TAG, `[MovingPhoto] L1 failed, trying L2...`);
+    hilog.warn(DOMAIN, TAG, `[LivePhoto] L1 failed, trying L2...`);
 
-    const l2Result: ProcessResult = await MovingPhotoService.tryL2(
+    const l2Result: ProcessResult = await LivePhotoService.tryL2(
       context, jpgSandboxUri, mp4SandboxUri, originalFileName, pairedVideo, originalJpgUri
     );
     if (l2Result.success) {
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L2 success`);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L2 success`);
     } else {
-      hilog.error(DOMAIN, TAG, `[MovingPhoto] L2 also failed, all levels exhausted`);
+      hilog.error(DOMAIN, TAG, `[LivePhoto] L2 also failed, all levels exhausted`);
     }
     return l2Result;
   }
@@ -68,23 +68,23 @@ export class MovingPhotoService {
     originalJpgUri: string
   ): Promise<ProcessResult> {
     if (!HeifService.isHeifSupported()) {
-      hilog.warn(DOMAIN, TAG, `[MovingPhoto] L0: HEIF not supported, skip`);
-      return MovingPhotoService.createFailureResult(originalFileName, pairedVideo, ErrorCode.HEIF_CONVERSION_FAILED, false);
+      hilog.warn(DOMAIN, TAG, `[LivePhoto] L0: HEIF not supported, skip`);
+      return LivePhotoService.createFailureResult(originalFileName, pairedVideo, ErrorCode.HEIF_CONVERSION_FAILED, false);
     }
 
     let heifSandboxUri: string = '';
     try {
       const heifPath: string = `${context.filesDir}/${AppConstants.SANDBOX_DIR}/${originalBaseName}_${Date.now()}.heic`;
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L0: converting JPG to HEIF, output=%{public}s`, heifPath);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L0: converting JPG to HEIF, output=%{public}s`, heifPath);
       heifSandboxUri = await HeifService.convertJpgToHeif(context, jpgSandboxUri, heifPath, originalJpgUri);
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L0: HEIF conversion success, uri=%{public}s`, heifSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L0: HEIF conversion success, uri=%{public}s`, heifSandboxUri);
     } catch (e) {
       const heifErr: BusinessError = e as BusinessError;
-      hilog.error(DOMAIN, TAG, `[MovingPhoto] L0: HEIF conversion failed: %{public}s`, heifErr.message ?? 'unknown');
-      return MovingPhotoService.createFailureResult(originalFileName, pairedVideo, ErrorCode.HEIF_CONVERSION_FAILED, false);
+      hilog.error(DOMAIN, TAG, `[LivePhoto] L0: HEIF conversion failed: %{public}s`, heifErr.message ?? 'unknown');
+      return LivePhotoService.createFailureResult(originalFileName, pairedVideo, ErrorCode.HEIF_CONVERSION_FAILED, false);
     }
 
-    const apiResult: ProcessResult = await MovingPhotoService.callOfficialApi(
+    const apiResult: ProcessResult = await LivePhotoService.callOfficialApi(
       context, heifSandboxUri, mp4SandboxUri, originalBaseName, 'heic', originalFileName, pairedVideo
     );
 
@@ -96,7 +96,7 @@ export class MovingPhotoService {
       originalFileName,
       pairedVideo,
       AppConstants.OUTPUT_TYPE_L0,
-      apiResult.movingPhotoUri,
+      apiResult.livePhotoUri,
       false
     );
   }
@@ -109,7 +109,7 @@ export class MovingPhotoService {
     originalFileName: string,
     pairedVideo: string
   ): Promise<ProcessResult> {
-    const apiResult: ProcessResult = await MovingPhotoService.callOfficialApi(
+    const apiResult: ProcessResult = await LivePhotoService.callOfficialApi(
       context, jpgSandboxUri, mp4SandboxUri, originalBaseName, 'jpg', originalFileName, pairedVideo
     );
 
@@ -121,7 +121,7 @@ export class MovingPhotoService {
       originalFileName,
       pairedVideo,
       AppConstants.OUTPUT_TYPE_L1,
-      apiResult.movingPhotoUri,
+      apiResult.livePhotoUri,
       true
     );
   }
@@ -134,15 +134,15 @@ export class MovingPhotoService {
     pairedVideo: string,
     originalJpgUri: string
   ): Promise<ProcessResult> {
-    hilog.info(DOMAIN, TAG, `[MovingPhoto] tryL2 start (binary splice fallback)`);
+    hilog.info(DOMAIN, TAG, `[LivePhoto] tryL2 start (binary splice fallback)`);
     try {
       const jpgPath: string = SandboxHelper.sandboxUriToPath(jpgSandboxUri);
       const mp4Path: string = SandboxHelper.sandboxUriToPath(mp4SandboxUri);
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L2: jpgPath=%{public}s mp4Path=%{public}s`, jpgPath, mp4Path);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: jpgPath=%{public}s mp4Path=%{public}s`, jpgPath, mp4Path);
 
       const jpgStat = fs.statSync(jpgPath);
       const mp4Stat = fs.statSync(mp4Path);
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L2: jpgSize=%{public}d mp4Size=%{public}d`, jpgStat.size, mp4Stat.size);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: jpgSize=%{public}d mp4Size=%{public}d`, jpgStat.size, mp4Stat.size);
 
       const outputBaseName: string = SandboxHelper.extractBaseName(jpgSandboxUri);
       const outputPath: string = `${context.filesDir}/${AppConstants.SANDBOX_DIR}/${outputBaseName}_${Date.now()}.jpg`;
@@ -154,8 +154,8 @@ export class MovingPhotoService {
       fs.closeSync(jpgFile);
       fs.writeSync(outputFile.fd, jpgBuffer);
 
-      const xmpStr: string = MovingPhotoService.buildXmpMetadata(jpgStat.size, mp4Stat.size);
-      const xmpBuffer: ArrayBuffer = MovingPhotoService.stringToArrayBuffer(xmpStr);
+      const xmpStr: string = LivePhotoService.buildXmpMetadata(jpgStat.size, mp4Stat.size);
+      const xmpBuffer: ArrayBuffer = LivePhotoService.stringToArrayBuffer(xmpStr);
       fs.writeSync(outputFile.fd, xmpBuffer);
 
       const mp4File = fs.openSync(mp4Path, fs.OpenMode.READ_ONLY);
@@ -166,7 +166,7 @@ export class MovingPhotoService {
 
       fs.closeSync(outputFile);
 
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] L2: transferring EXIF date to output`);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] L2: transferring EXIF date to output`);
       await ExifHelper.transferDateTime(jpgSandboxUri, outputPath, originalJpgUri);
 
       return ProcessResult.createSuccess(
@@ -179,7 +179,7 @@ export class MovingPhotoService {
     } catch (e) {
       const err: BusinessError = e as BusinessError;
       const errMsg: string = err.message ?? 'unknown';
-      hilog.error(DOMAIN, TAG, `[MovingPhoto] L2 failed: %{public}s`, errMsg);
+      hilog.error(DOMAIN, TAG, `[LivePhoto] L2 failed: %{public}s`, errMsg);
       return ProcessResult.createFailure(
         fileName,
         pairedVideo,
@@ -203,7 +203,7 @@ export class MovingPhotoService {
     fileName: string,
     pairedVideo: string
   ): Promise<ProcessResult> {
-    hilog.info(DOMAIN, TAG, `[MovingPhoto] callOfficialApi start, imageUri=%{public}s mp4Uri=%{public}s title=%{public}s ext=%{public}s`, imageSandboxUri, mp4SandboxUri, assetBaseName, assetExtension);
+    hilog.info(DOMAIN, TAG, `[LivePhoto] callOfficialApi start, imageUri=%{public}s mp4Uri=%{public}s title=%{public}s ext=%{public}s`, imageSandboxUri, mp4SandboxUri, assetBaseName, assetExtension);
     try {
       const phAccessHelper: photoAccessHelper.PhotoAccessHelper =
         photoAccessHelper.getPhotoAccessHelper(context);
@@ -213,7 +213,7 @@ export class MovingPhotoService {
         subtype: photoAccessHelper.PhotoSubtype.MOVING_PHOTO,
       };
 
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] creating asset request (IMAGE/%{public}s/MOVING_PHOTO)...`, assetExtension);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] creating asset request (IMAGE/%{public}s/MOVING_PHOTO)...`, assetExtension);
       const assetChangeRequest: photoAccessHelper.MediaAssetChangeRequest =
         photoAccessHelper.MediaAssetChangeRequest.createAssetRequest(
           context,
@@ -222,23 +222,23 @@ export class MovingPhotoService {
           createOptions
         );
 
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] adding IMAGE_RESOURCE uri=%{public}s`, imageSandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] adding IMAGE_RESOURCE uri=%{public}s`, imageSandboxUri);
       assetChangeRequest.addResource(
         photoAccessHelper.ResourceType.IMAGE_RESOURCE,
         imageSandboxUri
       );
 
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] adding VIDEO_RESOURCE uri=%{public}s`, mp4SandboxUri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] adding VIDEO_RESOURCE uri=%{public}s`, mp4SandboxUri);
       assetChangeRequest.addResource(
         photoAccessHelper.ResourceType.VIDEO_RESOURCE,
         mp4SandboxUri
       );
 
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] applying changes...`);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] applying changes...`);
       await phAccessHelper.applyChanges(assetChangeRequest);
 
       const uri: string = assetChangeRequest.getAsset().uri;
-      hilog.info(DOMAIN, TAG, `[MovingPhoto] applyChanges success, asset uri=%{public}s`, uri);
+      hilog.info(DOMAIN, TAG, `[LivePhoto] applyChanges success, asset uri=%{public}s`, uri);
 
       return ProcessResult.createSuccess(
         fileName,
@@ -251,7 +251,7 @@ export class MovingPhotoService {
       const err: BusinessError = e as BusinessError;
       const errMsg: string = err.message ?? 'unknown';
       const errCode: number = err.code ?? 0;
-      hilog.error(DOMAIN, TAG, `[MovingPhoto] callOfficialApi failed: code=%{public}d message=%{public}s`, errCode, errMsg);
+      hilog.error(DOMAIN, TAG, `[LivePhoto] callOfficialApi failed: code=%{public}d message=%{public}s`, errCode, errMsg);
       return ProcessResult.createFailure(
         fileName,
         pairedVideo,

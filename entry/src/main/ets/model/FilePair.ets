@@ -69,14 +69,14 @@ export class ProcessResult {
   success: boolean = false;
   outputType: string = '';
   errorRecord: ProcessErrorRecord | undefined = undefined;
-  movingPhotoUri: string = '';
+  livePhotoUri: string = '';
   heifDegraded: boolean = false;
 
   static createSuccess(
     fileName: string,
     pairedVideo: string,
     outputType: string,
-    movingPhotoUri: string,
+    livePhotoUri: string,
     heifDegraded: boolean
   ): ProcessResult {
     const result = new ProcessResult();
@@ -84,7 +84,7 @@ export class ProcessResult {
     result.pairedVideo = pairedVideo;
     result.success = true;
     result.outputType = outputType;
-    result.movingPhotoUri = movingPhotoUri;
+    result.livePhotoUri = livePhotoUri;
     result.heifDegraded = heifDegraded;
     return result;
   }

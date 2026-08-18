@@ -4,7 +4,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { FileCard } from '../component/FileCard';
 import { FileValidator } from '../service/FileValidator';
-import { MovingPhotoService } from '../service/MovingPhotoService';
+import { LivePhotoService } from '../service/LivePhotoService';
 import { SandboxHelper } from '../service/SandboxHelper';
 import { ProcessResult } from '../model/FilePair';
 import { ErrorCode } from '../constants/ErrorCode';
@@ -26,7 +26,7 @@ struct ManualCompose {
   @State sameNameHint: string = '';
   @State errorMessage: string = '';
   @State isComposing: boolean = false;
-  @State movingPhotoUri: string = '';
+  @State livePhotoUri: string = '';
   @State showSaveButton: boolean = false;
   private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
 
@@ -118,7 +118,7 @@ struct ManualCompose {
             .padding(16)
           }
 
-          if (this.movingPhotoUri.length > 0) {
+          if (this.livePhotoUri.length > 0) {
             Column() {
               Text('合成成功!')
                 .fontSize(16)
@@ -136,7 +136,7 @@ struct ManualCompose {
             .alignItems(HorizontalAlign.Center)
           }
 
-          if (this.showSaveButton && this.movingPhotoUri.length === 0 && !this.isComposing) {
+          if (this.showSaveButton && this.livePhotoUri.length === 0 && !this.isComposing) {
             Column({ space: 12 }) {
               Text('点击下方按钮保存动态照片到相册')
                 .fontSize(14)
@@ -161,7 +161,7 @@ struct ManualCompose {
             .alignItems(HorizontalAlign.Center)
           }
 
-          if (!this.showSaveButton && this.movingPhotoUri.length === 0 && !this.isComposing) {
+          if (!this.showSaveButton && this.livePhotoUri.length === 0 && !this.isComposing) {
             Button('合成动态照片')
               .width('100%')
               .height(48)
@@ -202,7 +202,7 @@ struct ManualCompose {
         this.checkSameName();
         this.errorMessage = '';
         this.showSaveButton = false;
-        this.movingPhotoUri = '';
+        this.livePhotoUri = '';
       }
     } catch (e) {
       this.errorMessage = '选择图片失败';
@@ -231,7 +231,7 @@ struct ManualCompose {
         this.checkSameName();
         this.errorMessage = '';
         this.showSaveButton = false;
-        this.movingPhotoUri = '';
+        this.livePhotoUri = '';
       }
     } catch (e) {
       this.errorMessage = '选择视频失败';
@@ -291,20 +291,20 @@ struct ManualCompose {
       const mp4SandboxUri: string = await SandboxHelper.copyToSandbox(this.context, this.videoUri);
       hilog.info(DOMAIN, TAG, `[ManualCompose] sandbox copy done, jpgUri=%{public}s mp4Uri=%{public}s`, jpgSandboxUri, mp4SandboxUri);
 
-      hilog.info(DOMAIN, TAG, `[ManualCompose] calling composeMovingPhoto...`);
-      const result: ProcessResult = await MovingPhotoService.composeMovingPhoto(
+      hilog.info(DOMAIN, TAG, `[ManualCompose] calling composeLivePhoto...`);
+      const result: ProcessResult = await LivePhotoService.composeLivePhoto(
         this.context,
         jpgSandboxUri,
         mp4SandboxUri,
         this.imageUri,
         this.videoUri
       );
-      hilog.info(DOMAIN, TAG, `[ManualCompose] composeMovingPhoto done, success=%{public}s`, `${result.success}`);
+      hilog.info(DOMAIN, TAG, `[ManualCompose] composeLivePhoto done, success=%{public}s`, `${result.success}`);
 
       if (result.success) {
-        this.movingPhotoUri = result.movingPhotoUri;
+        this.livePhotoUri = result.livePhotoUri;
         this.errorMessage = '';
-        hilog.info(DOMAIN, TAG, `[ManualCompose] movingPhotoUri=%{public}s`, result.movingPhotoUri);
+        hilog.info(DOMAIN, TAG, `[ManualCompose] livePhotoUri=%{public}s`, result.livePhotoUri);
       } else {
         if (result.errorRecord !== undefined) {
           this.errorMessage = result.errorRecord.errorMessage;

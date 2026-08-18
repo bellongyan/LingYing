@@ -3,7 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ResultItem } from '../component/ResultItem';
 import { ProcessResult } from '../model/FilePair';
 import { ResultDataHolder } from '../model/RouteParams';
-import { MovingPhotoService } from '../service/MovingPhotoService';
+import { LivePhotoService } from '../service/LivePhotoService';
 import { SandboxHelper } from '../service/SandboxHelper';
 import { BusinessError } from '@kit.BasicServicesKit';
 
@@ -243,7 +243,7 @@ struct ResultPage {
       const jpgSandboxUri: string = await SandboxHelper.copyToSandbox(this.context, item.fileName);
       const mp4SandboxUri: string = await SandboxHelper.copyToSandbox(this.context, item.pairedVideo);
 
-      const result: ProcessResult = await MovingPhotoService.composeMovingPhoto(
+      const result: ProcessResult = await LivePhotoService.composeLivePhoto(
         this.context,
         jpgSandboxUri,
         mp4SandboxUri,
