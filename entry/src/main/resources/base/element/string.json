@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "动态照片合成应用"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "动态照片合成工具"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "灵影"
+    },
+    {
+      "name": "app_name",
+      "value": "灵影"
+    },
+    {
+      "name": "read_imagevideo_reason",
+      "value": "用于选择和读取JPG图片与MP4视频文件进行动态照片合成"
+    },
+    {
+      "name": "write_imagevideo_reason",
+      "value": "用于将合成的动态照片保存到系统相册"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "float": [
+    {
+      "name": "page_text_font_size",
+      "value": "50fp"
+    },
+    {
+      "name": "card_radius",
+      "value": "12fp"
+    },
+    {
+      "name": "button_height",
+      "value": "48fp"
+    },
+    {
+      "name": "page_padding",
+      "value": "20fp"
+    }
+  ]
+}
